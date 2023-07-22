@@ -7,7 +7,7 @@ struct libnet_ether_hdr
 {
     u_int8_t  ether_dhost[ETHER_ADDR_LEN];/* destination ethernet address */
     u_int8_t  ether_shost[ETHER_ADDR_LEN];/* source ethernet address */
-    u_int16_t ether_type;                 /* protocol */
+    u_int16_t ether_type;           	    /* protocol */
 };
 
 struct libnet_ipv4_hdr
@@ -99,8 +99,14 @@ struct libnet_tcp_hdr
 };
 
 void print_mac(u_int8_t *m){
-	printf("%02x:%02x:%02x:%02x:%02x:%02x:",m[0],m[1],m[2],m[3],m[4],m[5]);
+	printf("%02x:%02x:%02x:%02x:%02x:%02x:\n",m[0],m[1],m[2],m[3],m[4],m[5]);
 }
+
+void print_ip(struct in_addr m){
+	printf("%s\n",inet_ntoa(m));
+}
+
+// void print
 
 void usage() {
 	printf("syntax: pcap-test <interface>\n");
@@ -124,6 +130,7 @@ bool parse(Param* param, int argc, char* argv[]) {
 	return true;
 }
 
+
 int main(int argc, char* argv[]) {
 	if (!parse(&param, argc, argv))
 		return -1;
@@ -144,15 +151,18 @@ int main(int argc, char* argv[]) {
 			printf("pcap_next_ex return %d(%s)\n", res, pcap_geterr(pcap));
 			break;
 		}
-		printf("%u bytes captured\n", header->caplen);
+
 		struct libnet_ether_hdr *eth_hdr =(struct libnet_ether_hdr *) packet;
+		printf("src mac : ");
 		print_mac(eth_hdr->ether_shost);
-		printf("\n");
+		printf("dst mac : ");
 		print_mac(eth_hdr->ether_dhost);
-		printf("\n");
-		printf("ether_type : %x\n", eth_hdr->ether_type);
+
 		struct libnet_ipv4_hdr *ip_hdr = (struct libnet_ipv4_hdr *)(packet + sizeof(struct libnet_ipv4_hdr));
-		printf("%s, %s\n",inet_ntoa(ip_hdr->ip_src), inet_ntoa(ip_hdr->ip_dst));
+		printf("src ip : ");
+		print_ip(ip_hdr->ip_src);
+		printf("dst ip : ");
+		print_ip(ip_hdr->ip_dst);
 	}
 	pcap_close(pcap);
 }
