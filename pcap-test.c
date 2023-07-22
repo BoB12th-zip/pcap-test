@@ -60,14 +60,8 @@ struct libnet_tcp_hdr
     u_int16_t th_dport;       /* destination port */
     u_int32_t th_seq;          /* sequence number */
     u_int32_t th_ack;          /* acknowledgement number */
-#if (LIBNET_LIL_ENDIAN)
     u_int8_t th_x2:4,         /* (unused) */
            th_off:4;        /* data offset */
-#endif
-#if (LIBNET_BIG_ENDIAN)
-    u_int8_t th_off:4,        /* data offset */
-           th_x2:4;         /* (unused) */
-#endif
     u_int8_t  th_flags;       /* control flags */
 #ifndef TH_FIN
 #define TH_FIN    0x01      /* finished send data */
@@ -106,8 +100,6 @@ void print_ip(struct in_addr m){
 	printf("%s\n",inet_ntoa(m));
 }
 
-// void print
-
 void usage() {
 	printf("syntax: pcap-test <interface>\n");
 	printf("sample: pcap-test wlan0\n");
@@ -129,7 +121,6 @@ bool parse(Param* param, int argc, char* argv[]) {
 	param->dev_ = argv[1];
 	return true;
 }
-
 
 int main(int argc, char* argv[]) {
 	if (!parse(&param, argc, argv))
@@ -153,16 +144,37 @@ int main(int argc, char* argv[]) {
 		}
 
 		struct libnet_ether_hdr *eth_hdr =(struct libnet_ether_hdr *) packet;
+		struct libnet_ipv4_hdr *ip_hdr = (struct libnet_ipv4_hdr *)(packet + sizeof    (struct libnet_ether_hdr));
+		struct libnet_tcp_hdr *tcp_hdr = (struct libnet_tcp_hdr *)(packet + sizeof(struct libnet_ether_hdr) + sizeof(struct libnet_ipv4_hdr));
+
+		if(ip_hdr->ip_p != 6)
+			continue;
+
 		printf("src mac : ");
 		print_mac(eth_hdr->ether_shost);
 		printf("dst mac : ");
 		print_mac(eth_hdr->ether_dhost);
 
-		struct libnet_ipv4_hdr *ip_hdr = (struct libnet_ipv4_hdr *)(packet + sizeof(struct libnet_ipv4_hdr));
 		printf("src ip : ");
 		print_ip(ip_hdr->ip_src);
 		printf("dst ip : ");
 		print_ip(ip_hdr->ip_dst);
+
+		printf("src tcp : %d\n",ntohs(tcp_hdr->th_sport));
+		printf("dst tcp : %d\n",ntohs(tcp_hdr->th_dport));
+
+		u_int8_t loc = (sizeof(struct libnet_ether_hdr) + sizeof(struct libnet_ipv4_hdr) + tcp_hdr->th_off * 4);
+
+		if(header->len != loc)
+		{
+			printf("\n\n");
+			continue;
+		}
+		printf("Payload data: ");
+		for (int i = 0; i < 10  ; i++) {
+			printf("%02x ",packet[loc + i]);
+		}
+		printf("\n\n");
 	}
 	pcap_close(pcap);
 }
